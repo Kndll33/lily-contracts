@@ -1,0 +1,30 @@
+name: Contributor Task
+description: Break out a well-scoped contract, testing, or tooling task for contributors
+title: "[task] "
+labels: ["task"]
+body:
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Contract or workflow area this task belongs to.
+      placeholder: contracts/payments
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe the exact work that should be done.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Share assumptions, storage constraints, or links to supporting code.
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: List the tests, docs, and behavior expected before closing the task.
