@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/*",
+    "crates/*",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/lily-protocol/lily-contracts"
+homepage = "https://lilyprotocol.com"
+authors = ["Lily Protocol Contributors"]
+rust-version = "1.83"
+
+[workspace.dependencies]
+soroban-sdk = "22"
+lily-common = { path = "crates/lily-common" }
+lily-test-support = { path = "crates/lily-test-support" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
