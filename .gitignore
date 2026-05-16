@@ -7,3 +7,4 @@
 .stellar
 dist
 coverage
+**/test_snapshots/
