@@ -1,9 +1,31 @@
 #![cfg(test)]
 
-use soroban_sdk::symbol_short;
+use soroban_sdk::{symbol_short, FromVal, IntoVal, Symbol, Val, Vec};
 
-use super::{WalletBinding, WalletContract, WalletContractClient};
+use super::{DataKey, WalletBinding, WalletContract, WalletContractClient};
 use lily_test_support::{test_address, test_env};
+
+#[test]
+fn data_key_encodings_are_stable() {
+    let env = test_env();
+    let agent = test_address(&env);
+
+    let admin: Vec<Val> = soroban_sdk::vec![&env, Symbol::new(&env, "Admin").into_val(&env)];
+    let initialized: Vec<Val> =
+        soroban_sdk::vec![&env, Symbol::new(&env, "Initialized").into_val(&env)];
+    let binding: Vec<Val> = soroban_sdk::vec![
+        &env,
+        Symbol::new(&env, "Binding").into_val(&env),
+        agent.clone().into_val(&env),
+    ];
+
+    let actual_admin: Val = DataKey::Admin.into_val(&env);
+    let actual_initialized: Val = DataKey::Initialized.into_val(&env);
+    let actual_binding: Val = DataKey::Binding(agent).into_val(&env);
+    assert_eq!(Vec::<Val>::from_val(&env, &actual_admin), admin);
+    assert_eq!(Vec::<Val>::from_val(&env, &actual_initialized), initialized);
+    assert_eq!(Vec::<Val>::from_val(&env, &actual_binding), binding);
+}
 
 #[test]
 fn binds_wallet_and_updates_policy() {

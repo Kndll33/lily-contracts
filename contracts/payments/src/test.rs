@@ -2,8 +2,33 @@
 
 use lily_common::PaymentStatus;
 use lily_test_support::{soroban_string, test_address, test_env};
+use soroban_sdk::{FromVal, IntoVal, Symbol, Val, Vec};
 
-use super::{PaymentIntent, PaymentsContract, PaymentsContractClient};
+use super::{DataKey, PaymentIntent, PaymentsContract, PaymentsContractClient};
+
+#[test]
+fn data_key_encodings_are_stable() {
+    let env = test_env();
+
+    let scalar_cases = [
+        (DataKey::Admin, "Admin"),
+        (DataKey::Treasury, "Treasury"),
+        (DataKey::FeeBps, "FeeBps"),
+        (DataKey::NextIntentId, "NextIntentId"),
+        (DataKey::Initialized, "Initialized"),
+    ];
+
+    for (key, variant) in scalar_cases {
+        let expected: Vec<Val> = soroban_sdk::vec![&env, Symbol::new(&env, variant).into_val(&env)];
+        let actual: Val = key.into_val(&env);
+        assert_eq!(Vec::<Val>::from_val(&env, &actual), expected);
+    }
+
+    let intent: Vec<Val> =
+        soroban_sdk::vec![&env, Symbol::new(&env, "Intent").into_val(&env), 42_u64.into_val(&env),];
+    let actual_intent: Val = DataKey::Intent(42).into_val(&env);
+    assert_eq!(Vec::<Val>::from_val(&env, &actual_intent), intent);
+}
 
 #[test]
 fn creates_and_settles_payment_intents() {

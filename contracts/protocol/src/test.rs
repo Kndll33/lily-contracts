@@ -1,7 +1,26 @@
 #![cfg(test)]
 
-use super::{ProtocolConfig, ProtocolContract, ProtocolContractClient};
+use super::{DataKey, ProtocolConfig, ProtocolContract, ProtocolContractClient};
 use lily_test_support::{test_address, test_env};
+use soroban_sdk::{FromVal, IntoVal, Symbol, Val, Vec};
+
+#[test]
+fn data_key_encodings_are_stable() {
+    let env = test_env();
+
+    let cases = [
+        (DataKey::Admin, "Admin"),
+        (DataKey::Treasury, "Treasury"),
+        (DataKey::FeeBps, "FeeBps"),
+        (DataKey::Initialized, "Initialized"),
+    ];
+
+    for (key, variant) in cases {
+        let expected: Vec<Val> = soroban_sdk::vec![&env, Symbol::new(&env, variant).into_val(&env)];
+        let actual: Val = key.into_val(&env);
+        assert_eq!(Vec::<Val>::from_val(&env, &actual), expected);
+    }
+}
 
 #[test]
 fn initializes_once_and_reads_config() {
