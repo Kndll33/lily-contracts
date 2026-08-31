@@ -3,7 +3,8 @@
 //! Payment intent and settlement primitives for Lily Protocol.
 
 use lily_common::{
-    bump_instance, require, require_non_empty, require_valid_bps, PaymentStatus, ProtocolError,
+    bump_instance, require, require_admin, require_non_empty, require_valid_bps, PaymentStatus,
+    ProtocolError,
 };
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, unwrap::UnwrapOptimized, Address, Env,
@@ -56,7 +57,7 @@ impl PaymentsContract {
         );
         require_valid_bps(&env, fee_bps);
 
-        admin.require_auth();
+        require_admin(&env, &admin);
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Treasury, &treasury);
@@ -119,7 +120,7 @@ impl PaymentsContract {
         require_non_empty(&env, settlement_reference.len());
 
         let admin = get_admin(&env);
-        admin.require_auth();
+        require_admin(&env, &admin);
 
         let mut intent = get_intent_internal(&env, intent_id);
         require(

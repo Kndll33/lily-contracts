@@ -2,7 +2,7 @@
 
 //! Agent identity registry for Lily Protocol.
 
-use lily_common::{bump_instance, require, require_non_empty, ProtocolError};
+use lily_common::{bump_instance, require, require_admin, require_non_empty, ProtocolError};
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, unwrap::UnwrapOptimized, Address, Env,
     String,
@@ -37,7 +37,7 @@ impl IdentityContract {
             !env.storage().instance().has(&DataKey::Initialized),
             ProtocolError::AlreadyInitialized,
         );
-        admin.require_auth();
+        require_admin(&env, &admin);
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Initialized, &true);
         bump_instance(&env);
@@ -92,7 +92,7 @@ impl IdentityContract {
     pub fn deactivate(env: Env, agent: Address) {
         ensure_initialized(&env);
         let admin = get_admin(&env);
-        admin.require_auth();
+        require_admin(&env, &admin);
 
         let mut profile = get_profile_internal(&env, &agent);
         profile.active = false;

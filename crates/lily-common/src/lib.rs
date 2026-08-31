@@ -2,7 +2,7 @@
 
 //! Shared Soroban primitives used across Lily Protocol contracts.
 
-use soroban_sdk::{contracterror, contracttype, panic_with_error, Env};
+use soroban_sdk::{contracterror, contracttype, panic_with_error, Address, Env};
 
 /// Maximum basis points accepted by percentage-based configuration.
 pub const MAX_BPS: u32 = 10_000;
@@ -53,6 +53,14 @@ pub fn require_non_empty(env: &Env, len: u32) {
 /// Reject fee values greater than 100%.
 pub fn require_valid_bps(env: &Env, fee_bps: u32) {
     require(env, fee_bps <= MAX_BPS, ProtocolError::FeeBpsTooHigh);
+}
+
+/// Require authorization from the administrator resolved by a contract.
+///
+/// Keeping this gate in one shared helper ensures every contract uses the
+/// same authorization behavior after loading its administrator from storage.
+pub fn require_admin(_env: &Env, admin: &Address) {
+    admin.require_auth();
 }
 
 /// Keep instance storage alive for long-lived protocol state.

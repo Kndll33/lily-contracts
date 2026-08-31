@@ -2,7 +2,7 @@
 
 //! Agent wallet binding and policy contract.
 
-use lily_common::{bump_instance, require, ProtocolError};
+use lily_common::{bump_instance, require, require_admin, ProtocolError};
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol};
 
 #[contract]
@@ -35,7 +35,7 @@ impl WalletContract {
             !env.storage().instance().has(&DataKey::Initialized),
             ProtocolError::AlreadyInitialized,
         );
-        admin.require_auth();
+        require_admin(&env, &admin);
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Initialized, &true);
         bump_instance(&env);
