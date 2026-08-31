@@ -2,6 +2,10 @@
 
 use lily_common::PaymentStatus;
 use lily_test_support::{soroban_string, test_address, test_env};
+use soroban_sdk::{
+    testutils::{MockAuth, MockAuthInvoke},
+    IntoVal,
+};
 
 use super::{PaymentIntent, PaymentsContract, PaymentsContractClient};
 
@@ -58,10 +62,51 @@ fn payer_can_cancel_pending_intents() {
 
     client.initialize(&admin, &treasury, &50_u32);
     let id = client.create_intent(&payer, &payee, &5_000_i128, &soroban_string(&env, "cancel me"));
-    client.cancel_intent(&id);
+    client
+        .mock_auths(&[MockAuth {
+            address: &payer,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "cancel_intent",
+                args: (&id,).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .cancel_intent(&id);
 
     let cancelled = client.get_intent(&id);
     assert_eq!(cancelled.status, PaymentStatus::Cancelled);
+}
+
+#[test]
+#[should_panic]
+fn non_payer_cannot_cancel_pending_intents() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+    let payer = test_address(&env);
+    let non_payer = test_address(&env);
+    let payee = test_address(&env);
+
+    let contract_id = env.register(PaymentsContract, ());
+    let client = PaymentsContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin, &treasury, &50_u32);
+    let id = client.create_intent(&payer, &payee, &5_000_i128, &soroban_string(&env, "cancel me"));
+
+    // Supplying authorization from another account cannot satisfy the stored
+    // payer's require_auth call.
+    client
+        .mock_auths(&[MockAuth {
+            address: &non_payer,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "cancel_intent",
+                args: (&id,).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .cancel_intent(&id);
 }
 
 #[test]
