@@ -59,3 +59,33 @@ pub fn require_valid_bps(env: &Env, fee_bps: u32) {
 pub fn bump_instance(env: &Env) {
     env.storage().instance().extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #7)")]
+    fn require_panics_with_the_supplied_error() {
+        require(&Env::default(), false, ProtocolError::MissingRecord);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #4)")]
+    fn require_non_empty_rejects_zero_length() {
+        require_non_empty(&Env::default(), 0);
+    }
+
+    #[test]
+    fn require_valid_bps_accepts_both_boundaries() {
+        let env = Env::default();
+        require_valid_bps(&env, 0);
+        require_valid_bps(&env, MAX_BPS);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #5)")]
+    fn require_valid_bps_rejects_value_above_maximum() {
+        require_valid_bps(&Env::default(), MAX_BPS + 1);
+    }
+}
