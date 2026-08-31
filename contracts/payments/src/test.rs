@@ -2,6 +2,10 @@
 
 use lily_common::PaymentStatus;
 use lily_test_support::{soroban_string, test_address, test_env};
+use soroban_sdk::{
+    xdr::{ScErrorCode, ScErrorType},
+    Error,
+};
 
 use super::{PaymentIntent, PaymentsContract, PaymentsContractClient};
 
@@ -62,6 +66,24 @@ fn payer_can_cancel_pending_intents() {
 
     let cancelled = client.get_intent(&id);
     assert_eq!(cancelled.status, PaymentStatus::Cancelled);
+}
+
+#[test]
+fn unauthenticated_settlement_fails_before_input_validation() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+    let contract_id = env.register(PaymentsContract, ());
+    let client = PaymentsContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin, &treasury, &50_u32);
+    env.set_auths(&[]);
+
+    let result = client.try_settle_intent(&1_u64, &soroban_string(&env, ""));
+    assert_eq!(
+        result,
+        Err(Ok(Error::from_type_and_code(ScErrorType::Context, ScErrorCode::InvalidAction,)))
+    );
 }
 
 #[test]

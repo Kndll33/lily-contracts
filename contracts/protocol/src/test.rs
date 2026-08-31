@@ -2,6 +2,10 @@
 
 use super::{ProtocolConfig, ProtocolContract, ProtocolContractClient};
 use lily_test_support::{test_address, test_env};
+use soroban_sdk::{
+    xdr::{ScErrorCode, ScErrorType},
+    Error,
+};
 
 #[test]
 fn initializes_once_and_reads_config() {
@@ -44,6 +48,39 @@ fn rejects_fee_bps_above_max() {
     let client = ProtocolContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &10_001_u32);
+}
+
+#[test]
+fn unauthenticated_invalid_initialization_fails_at_auth() {
+    let env = soroban_sdk::Env::default();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+    let contract_id = env.register(ProtocolContract, ());
+    let client = ProtocolContractClient::new(&env, &contract_id);
+
+    let result = client.try_initialize(&admin, &treasury, &10_001_u32);
+    assert_eq!(
+        result,
+        Err(Ok(Error::from_type_and_code(ScErrorType::Context, ScErrorCode::InvalidAction,)))
+    );
+}
+
+#[test]
+fn unauthenticated_fee_update_fails_before_validation() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+    let contract_id = env.register(ProtocolContract, ());
+    let client = ProtocolContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin, &treasury, &100_u32);
+    env.set_auths(&[]);
+
+    let result = client.try_set_fee_bps(&10_001_u32);
+    assert_eq!(
+        result,
+        Err(Ok(Error::from_type_and_code(ScErrorType::Context, ScErrorCode::InvalidAction,)))
+    );
 }
 
 #[test]

@@ -49,14 +49,14 @@ enum DataKey {
 impl PaymentsContract {
     /// Initialize settlement configuration once.
     pub fn initialize(env: Env, admin: Address, treasury: Address, fee_bps: u32) {
+        admin.require_auth();
+
         require(
             &env,
             !env.storage().instance().has(&DataKey::Initialized),
             ProtocolError::AlreadyInitialized,
         );
         require_valid_bps(&env, fee_bps);
-
-        admin.require_auth();
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Treasury, &treasury);
@@ -116,10 +116,10 @@ impl PaymentsContract {
     /// Mark a payment intent as settled.
     pub fn settle_intent(env: Env, intent_id: u64, settlement_reference: String) {
         ensure_initialized(&env);
-        require_non_empty(&env, settlement_reference.len());
-
         let admin = get_admin(&env);
         admin.require_auth();
+
+        require_non_empty(&env, settlement_reference.len());
 
         let mut intent = get_intent_internal(&env, intent_id);
         require(
