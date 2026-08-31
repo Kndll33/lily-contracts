@@ -81,3 +81,19 @@ fn rejects_settle_after_cancellation() {
     client.cancel_intent(&id);
     client.settle_intent(&id, &soroban_string(&env, "tx-0002"));
 }
+
+#[test]
+#[should_panic]
+fn get_intent_rejects_unknown_ids() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+
+    let contract_id = env.register(PaymentsContract, ());
+    let client = PaymentsContractClient::new(&env, &contract_id);
+    client.initialize(&admin, &treasury, &50_u32);
+
+    // The missing persistent record is converted to ProtocolError::MissingRecord
+    // by get_intent_internal, which the generated client surfaces as a panic.
+    client.get_intent(&1_u64);
+}
