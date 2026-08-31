@@ -1,9 +1,31 @@
 #![cfg(test)]
 
 use soroban_sdk::symbol_short;
+use soroban_sdk::testutils::{storage::Instance as _, Ledger};
 
 use super::{WalletBinding, WalletContract, WalletContractClient};
+use lily_common::{INSTANCE_BUMP_AMOUNT, INSTANCE_BUMP_THRESHOLD};
 use lily_test_support::{test_address, test_env};
+
+#[test]
+fn mutations_refresh_instance_ttl() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let agent = test_address(&env);
+    let wallet = test_address(&env);
+    let contract_id = env.register(WalletContract, ());
+    let client = WalletContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin);
+    env.ledger().set_sequence_number(INSTANCE_BUMP_AMOUNT - INSTANCE_BUMP_THRESHOLD + 1);
+    let ttl_before = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+    assert!(ttl_before < INSTANCE_BUMP_THRESHOLD);
+
+    client.bind_wallet(&agent, &wallet, &symbol_short!("USDC"), &1_000_i128);
+
+    let ttl_after = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+    assert_eq!(ttl_after, INSTANCE_BUMP_AMOUNT);
+}
 
 #[test]
 fn binds_wallet_and_updates_policy() {

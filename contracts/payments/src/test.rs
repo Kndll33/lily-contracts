@@ -1,9 +1,31 @@
 #![cfg(test)]
 
-use lily_common::PaymentStatus;
+use lily_common::{PaymentStatus, INSTANCE_BUMP_AMOUNT, INSTANCE_BUMP_THRESHOLD};
 use lily_test_support::{soroban_string, test_address, test_env};
+use soroban_sdk::testutils::{storage::Instance as _, Ledger};
 
 use super::{PaymentIntent, PaymentsContract, PaymentsContractClient};
+
+#[test]
+fn mutations_refresh_instance_ttl() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let treasury = test_address(&env);
+    let payer = test_address(&env);
+    let payee = test_address(&env);
+    let contract_id = env.register(PaymentsContract, ());
+    let client = PaymentsContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin, &treasury, &50_u32);
+    env.ledger().set_sequence_number(INSTANCE_BUMP_AMOUNT - INSTANCE_BUMP_THRESHOLD + 1);
+    let ttl_before = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+    assert!(ttl_before < INSTANCE_BUMP_THRESHOLD);
+
+    client.create_intent(&payer, &payee, &1_i128, &soroban_string(&env, "ttl test"));
+
+    let ttl_after = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+    assert_eq!(ttl_after, INSTANCE_BUMP_AMOUNT);
+}
 
 #[test]
 fn creates_and_settles_payment_intents() {
