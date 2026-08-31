@@ -15,5 +15,8 @@ doctest = false
 [dependencies]
 soroban-sdk = { workspace = true }
 
+[dev-dependencies]
+proptest = "1"
+
 [lints]
 workspace = true
