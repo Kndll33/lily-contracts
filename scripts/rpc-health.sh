@@ -1,44 +1,63 @@
 #!/usr/bin/env sh
 set -eu
 
-RPC_URL=${SOROBAN_RPC_URL:-}
+SOROBAN_RPC_URL="${SOROBAN_RPC_URL:-${1:-https://soroban-testnet.stellar.org}}"
+TIMEOUT="${RPC_TIMEOUT:-10}"
 
-if [ -z "$RPC_URL" ]; then
-  printf 'error: SOROBAN_RPC_URL is required\n' >&2
-  printf 'usage: SOROBAN_RPC_URL=https://... %s\n' "$0" >&2
-  exit 2
+printf "Probing Soroban RPC endpoint: %s\n" "$SOROBAN_RPC_URL"
+
+# 1. Probe getHealth
+HEALTH_REQ='{"jsonrpc":"2.0","id":1,"method":"getHealth"}'
+HEALTH_RESP="$(curl -s -f -m "$TIMEOUT" -X POST \
+  -H "Content-Type: application/json" \
+  -d "$HEALTH_REQ" \
+  "$SOROBAN_RPC_URL" 2>/dev/null || true)"
+
+if [ -z "$HEALTH_RESP" ]; then
+  echo "Error: Failed to connect to Soroban RPC endpoint or request timed out." >&2
+  exit 1
 fi
 
-if ! command -v curl >/dev/null 2>&1; then
-  printf 'error: curl is required\n' >&2
-  exit 2
+# Check if JSONRPC error occurred
+if echo "$HEALTH_RESP" | grep -q '"error"'; then
+  echo "Error: getHealth returned an RPC error:" >&2
+  echo "$HEALTH_RESP" >&2
+  exit 1
 fi
 
-probe() {
-  method=$1
-  response=$(
-    curl -fsS \
-      -H 'Content-Type: application/json' \
-      --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$method\"}" \
-      "$RPC_URL"
-  ) || {
-    printf 'error: %s request failed\n' "$method" >&2
-    return 1
-  }
+# Check for health status
+if ! echo "$HEALTH_RESP" | grep -q '"status"[[:space:]]*:[[:space:]]*"healthy"'; then
+  echo "Error: Soroban RPC reported unhealthy status:" >&2
+  echo "$HEALTH_RESP" >&2
+  exit 1
+fi
 
-  if printf '%s' "$response" | grep -Eq '"error"[[:space:]]*:'; then
-    printf 'error: %s returned a JSON-RPC error: %s\n' "$method" "$response" >&2
-    return 1
-  fi
+# 2. Probe getLatestLedger
+LEDGER_REQ='{"jsonrpc":"2.0","id":2,"method":"getLatestLedger"}'
+LEDGER_RESP="$(curl -s -f -m "$TIMEOUT" -X POST \
+  -H "Content-Type: application/json" \
+  -d "$LEDGER_REQ" \
+  "$SOROBAN_RPC_URL" 2>/dev/null || true)"
 
-  if ! printf '%s' "$response" | grep -Eq '"result"[[:space:]]*:'; then
-    printf 'error: %s response has no result: %s\n' "$method" "$response" >&2
-    return 1
-  fi
+if [ -z "$LEDGER_RESP" ]; then
+  echo "Error: getLatestLedger probe failed or timed out." >&2
+  exit 1
+fi
 
-  printf '%s: ok\n' "$method"
-}
+if echo "$LEDGER_RESP" | grep -q '"error"'; then
+  echo "Error: getLatestLedger returned an RPC error:" >&2
+  echo "$LEDGER_RESP" >&2
+  exit 1
+fi
 
-probe getHealth
-probe getLatestLedger
-printf 'RPC endpoint healthy: %s\n' "$RPC_URL"
+if ! echo "$LEDGER_RESP" | grep -q '"sequence"'; then
+  echo "Error: getLatestLedger response missing sequence field." >&2
+  exit 1
+fi
+
+LEDGER_SEQ="$(echo "$LEDGER_RESP" | sed -n 's/.*"sequence"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p')"
+
+printf "RPC Status: healthy\n"
+printf "Latest Ledger Sequence: %s\n" "$LEDGER_SEQ"
+printf "Health probe succeeded for %s\n" "$SOROBAN_RPC_URL"
+exit 0
