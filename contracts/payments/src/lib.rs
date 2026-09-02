@@ -68,6 +68,8 @@ impl PaymentsContract {
     /// The initial admin must match the address pinned by the constructor at
     /// deploy time, preventing initialization front-running.
     pub fn initialize(env: Env, admin: Address, treasury: Address, fee_bps: u32) {
+        admin.require_auth();
+
         require(
             &env,
             !env.storage().instance().has(&DataKey::Initialized),
