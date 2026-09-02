@@ -151,14 +151,14 @@ impl PaymentsContract {
     /// error from `require_auth` (see `CONTRIBUTING.md` for the mapping).
     pub fn settle_intent(env: Env, caller: Address, intent_id: u64, settlement_reference: String) {
         ensure_initialized(&env);
-        require_non_empty(&env, settlement_reference.len());
-
         let admin = get_admin(&env);
         require_caller(&env, &caller, &admin);
         require_auth_or_error(&caller, &env);
 
         // Guard the status transition against reentrant settlement.
         let _guard = NonReentrantGuard::acquire(&env, symbol_short!("settle"));
+
+        require_non_empty(&env, settlement_reference.len());
 
         let mut intent = get_intent_internal(&env, intent_id);
         require(

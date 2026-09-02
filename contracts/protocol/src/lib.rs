@@ -97,10 +97,10 @@ impl ProtocolContract {
     /// Update the protocol fee in basis points.
     pub fn set_fee_bps(env: Env, fee_bps: u32) {
         ensure_initialized(&env);
-        require_valid_bps(&env, fee_bps);
-
         let admin = get_admin(&env);
         require_auth_or_error(&admin, &env);
+
+        require_valid_bps(&env, fee_bps);
 
         env.storage().instance().set(&DataKey::FeeBps, &fee_bps);
         bump_instance(&env);
