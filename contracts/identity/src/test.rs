@@ -8,6 +8,15 @@ use super::{AgentProfile, DataKey, IdentityContract, IdentityContractClient};
 use lily_test_support::{soroban_string, test_address, test_env};
 
 #[test]
+fn returns_protocol_version() {
+    let env = test_env();
+    let contract_id = env.register(IdentityContract, ());
+    let client = IdentityContractClient::new(&env, &contract_id);
+
+    assert_eq!(client.version(), PROTOCOL_VERSION);
+}
+
+#[test]
 fn registers_and_updates_profiles() {
     let env = test_env();
     let admin = test_address(&env);

@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 #![cfg(test)]
 
-use lily_common::PaymentStatus;
+use lily_common::{PaymentStatus, PROTOCOL_VERSION};
 use lily_test_support::{soroban_string, test_address, test_env};
 use soroban_sdk::testutils::Ledger;
 
@@ -16,6 +16,15 @@ fn bootstrap() -> (soroban_sdk::Env, soroban_sdk::Address, PaymentsContractClien
     let client = PaymentsContractClient::new(&env, &contract_id);
     client.initialize(&admin, &treasury, &50_u32);
     (env, admin, client)
+}
+
+#[test]
+fn returns_protocol_version() {
+    let env = test_env();
+    let contract_id = env.register(PaymentsContract, ());
+    let client = PaymentsContractClient::new(&env, &contract_id);
+
+    assert_eq!(client.version(), PROTOCOL_VERSION);
 }
 
 #[test]
