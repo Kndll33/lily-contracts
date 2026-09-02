@@ -28,11 +28,23 @@ enum DataKey {
     Admin,
     Initialized,
     Profile(Address),
+    PinnedAdmin,
 }
 
 #[contractimpl]
 impl IdentityContract {
+    /// Capture the intended initial admin at deploy time.
+    ///
+    /// `initialize` only accepts this exact address, so a front-runner cannot
+    /// claim a fresh deployment with their own admin.
+    pub fn __constructor(env: Env, initial_admin: Address) {
+        env.storage().instance().set(&DataKey::PinnedAdmin, &initial_admin);
+    }
+
     /// Initialize the registry admin.
+    ///
+    /// The initial admin must match the address pinned by the constructor at
+    /// deploy time, preventing initialization front-running.
     pub fn initialize(env: Env, admin: Address) {
         require(
             &env,
@@ -134,6 +146,11 @@ fn ensure_initialized(env: &Env) {
         env.storage().instance().has(&DataKey::Initialized),
         ProtocolError::NotInitialized,
     );
+}
+
+fn require_initial_admin(env: &Env, admin: &Address) {
+    let pinned: Address = env.storage().instance().get(&DataKey::PinnedAdmin).unwrap_optimized();
+    require(env, *admin == pinned, ProtocolError::Unauthorized);
 }
 
 fn get_admin(env: &Env) -> Address {

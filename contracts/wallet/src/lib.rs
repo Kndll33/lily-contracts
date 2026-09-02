@@ -27,11 +27,23 @@ enum DataKey {
     Admin,
     Initialized,
     Binding(Address),
+    PinnedAdmin,
 }
 
 #[contractimpl]
 impl WalletContract {
+    /// Capture the intended initial admin at deploy time.
+    ///
+    /// `initialize` only accepts this exact address, so a front-runner cannot
+    /// claim a fresh deployment with their own admin.
+    pub fn __constructor(env: Env, initial_admin: Address) {
+        env.storage().instance().set(&DataKey::PinnedAdmin, &initial_admin);
+    }
+
     /// Initialize the wallet policy registry.
+    ///
+    /// The initial admin must match the address pinned by the constructor at
+    /// deploy time, preventing initialization front-running.
     pub fn initialize(env: Env, admin: Address) {
         require(
             &env,
@@ -80,7 +92,7 @@ impl WalletContract {
         require_auth_or_error(&agent, &env);
 
         let mut binding = get_binding_internal(&env, &agent);
-        require(&env, binding.enabled, ProtocolError::InvalidInput);
+        require_enabled(&env, binding.enabled);
         binding.spend_limit = spend_limit;
         binding.revision += 1;
 

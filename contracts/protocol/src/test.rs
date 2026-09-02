@@ -9,7 +9,7 @@ fn initializes_once_and_reads_config() {
     let admin = test_address(&env);
     let treasury = test_address(&env);
 
-    let contract_id = env.register(ProtocolContract, ());
+    let contract_id = env.register(ProtocolContract, (admin.clone(),));
     let client = ProtocolContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &250_u32);
@@ -33,7 +33,7 @@ fn rejects_reinitialization() {
     let admin = test_address(&env);
     let treasury = test_address(&env);
 
-    let contract_id = env.register(ProtocolContract, ());
+    let contract_id = env.register(ProtocolContract, (admin.clone(),));
     let client = ProtocolContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &100_u32);
@@ -47,7 +47,7 @@ fn rejects_fee_bps_above_max() {
     let admin = test_address(&env);
     let treasury = test_address(&env);
 
-    let contract_id = env.register(ProtocolContract, ());
+    let contract_id = env.register(ProtocolContract, (admin.clone(),));
     let client = ProtocolContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &10_001_u32);
@@ -60,7 +60,7 @@ fn updates_fee_and_treasury() {
     let treasury = test_address(&env);
     let next_treasury = test_address(&env);
 
-    let contract_id = env.register(ProtocolContract, ());
+    let contract_id = env.register(ProtocolContract, (admin.clone(),));
     let client = ProtocolContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &100_u32);

@@ -11,7 +11,7 @@ fn bootstrap() -> (soroban_sdk::Env, soroban_sdk::Address, PaymentsContractClien
     let treasury = test_address(&env);
     let admin = test_address(&env);
 
-    let contract_id = env.register(PaymentsContract, ());
+    let contract_id = env.register(PaymentsContract, (admin.clone(),));
     let client = PaymentsContractClient::new(&env, &contract_id);
     client.initialize(&admin, &treasury, &50_u32);
     (env, admin, client)
@@ -79,7 +79,7 @@ fn payer_can_cancel_pending_intents() {
     let payer = test_address(&env);
     let payee = test_address(&env);
 
-    let contract_id = env.register(PaymentsContract, ());
+    let contract_id = env.register(PaymentsContract, (admin.clone(),));
     let client = PaymentsContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &50_u32);
@@ -142,7 +142,7 @@ fn rejects_settle_after_cancellation() {
     let payer = test_address(&env);
     let payee = test_address(&env);
 
-    let contract_id = env.register(PaymentsContract, ());
+    let contract_id = env.register(PaymentsContract, (admin.clone(),));
     let client = PaymentsContractClient::new(&env, &contract_id);
 
     client.initialize(&admin, &treasury, &50_u32);
