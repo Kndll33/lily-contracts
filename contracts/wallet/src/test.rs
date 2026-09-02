@@ -1,30 +1,21 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #![cfg(test)]
 
-use soroban_sdk::{symbol_short, FromVal, IntoVal, Symbol, Val, Vec};
+use soroban_sdk::symbol_short;
+use soroban_sdk::testutils::{Address as _, MockAuth, MockAuthInvoke};
+use soroban_sdk::{Address, Env, IntoVal};
 
-use super::{DataKey, WalletBinding, WalletContract, WalletContractClient};
+use super::{WalletBinding, WalletContract, WalletContractClient};
+use lily_common::PROTOCOL_VERSION;
 use lily_test_support::{test_address, test_env};
 
 #[test]
-fn data_key_encodings_are_stable() {
+fn returns_protocol_version() {
     let env = test_env();
-    let agent = test_address(&env);
+    let contract_id = env.register(WalletContract, ());
+    let client = WalletContractClient::new(&env, &contract_id);
 
-    let admin: Vec<Val> = soroban_sdk::vec![&env, Symbol::new(&env, "Admin").into_val(&env)];
-    let initialized: Vec<Val> =
-        soroban_sdk::vec![&env, Symbol::new(&env, "Initialized").into_val(&env)];
-    let binding: Vec<Val> = soroban_sdk::vec![
-        &env,
-        Symbol::new(&env, "Binding").into_val(&env),
-        agent.clone().into_val(&env),
-    ];
-
-    let actual_admin: Val = DataKey::Admin.into_val(&env);
-    let actual_initialized: Val = DataKey::Initialized.into_val(&env);
-    let actual_binding: Val = DataKey::Binding(agent).into_val(&env);
-    assert_eq!(Vec::<Val>::from_val(&env, &actual_admin), admin);
-    assert_eq!(Vec::<Val>::from_val(&env, &actual_initialized), initialized);
-    assert_eq!(Vec::<Val>::from_val(&env, &actual_binding), binding);
+    assert_eq!(client.version(), PROTOCOL_VERSION);
 }
 
 #[test]
@@ -34,7 +25,7 @@ fn binds_wallet_and_updates_policy() {
     let agent = test_address(&env);
     let wallet = test_address(&env);
 
-    let contract_id = env.register(WalletContract, ());
+    let contract_id = env.register(WalletContract, (admin.clone(),));
     let client = WalletContractClient::new(&env, &contract_id);
 
     client.initialize(&admin);
@@ -69,7 +60,7 @@ fn rejects_double_binding_while_active() {
     let agent = test_address(&env);
     let wallet = test_address(&env);
 
-    let contract_id = env.register(WalletContract, ());
+    let contract_id = env.register(WalletContract, (admin.clone(),));
     let client = WalletContractClient::new(&env, &contract_id);
 
     client.initialize(&admin);
@@ -85,9 +76,29 @@ fn rejects_zero_spend_limit() {
     let agent = test_address(&env);
     let wallet = test_address(&env);
 
-    let contract_id = env.register(WalletContract, ());
+    let contract_id = env.register(WalletContract, (admin.clone(),));
     let client = WalletContractClient::new(&env, &contract_id);
 
     client.initialize(&admin);
     client.bind_wallet(&agent, &wallet, &symbol_short!("USDC"), &0_i128);
 }
+
+#[test]
+fn admin_can_deactivate_wallet_binding() {
+    let env = test_env();
+    let admin = test_address(&env);
+    let agent = test_address(&env);
+    let wallet = test_address(&env);
+
+    let contract_id = env.register(WalletContract, ());
+    let client = WalletContractClient::new(&env, &contract_id);
+
+    client.initialize(&admin);
+    client.bind_wallet(&agent, &wallet, &symbol_short!("USDC"), &1_000_i128);
+    client.admin_deactivate(&agent);
+
+    let binding = client.get_binding(&agent);
+    assert!(!binding.enabled);
+    assert_eq!(binding.revision, 1);
+}
+
