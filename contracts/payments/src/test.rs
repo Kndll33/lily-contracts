@@ -94,7 +94,17 @@ fn payer_can_cancel_pending_intents() {
 
     client.initialize(&admin, &treasury, &50_u32);
     let id = client.create_intent(&payer, &payee, &5_000_i128, &soroban_string(&env, "cancel me"));
-    client.cancel_intent(&id);
+    client
+        .mock_auths(&[MockAuth {
+            address: &payer,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "cancel_intent",
+                args: (&id,).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .cancel_intent(&id);
 
     let cancelled = client.get_intent(&id);
     assert_eq!(cancelled.status, PaymentStatus::Cancelled);
